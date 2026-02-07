@@ -1,0 +1,48 @@
+{
+  "hash": "e62d82de",
+  "configHash": "8db1a6ee",
+  "lockfileHash": "ae1018a1",
+  "browserHash": "dc4e2b89",
+  "optimized": {
+    "axios": {
+      "src": "../../node_modules/.pnpm/axios@1.13.4/node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "e306292f",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/.pnpm/lucide-react@0.563.0_react@19.2.4/node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "e324b700",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "7d69760f",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/.pnpm/react@19.2.4/node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "43c55d4b",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/.pnpm/react@19.2.4/node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "d95945be",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-DgxVxUia": {
+      "file": "chunk-DgxVxUia.js",
+      "isDynamicEntry": false
+    },
+    "react-B0M2SmcR": {
+      "file": "react-B0M2SmcR.js",
+      "isDynamicEntry": false
+    }
+  }
+}
