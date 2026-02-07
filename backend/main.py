@@ -1,106 +1,85 @@
-import os
-import requests
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI, UploadFile, File
+from pydantic import BaseModel
+import requests, os
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
-# Load environment variables
+from utils.pdf_reader import extract_pdf_text
+from utils.docx_reader import extract_docx_text
+from utils.excel_reader import extract_excel_text
+
 load_dotenv()
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-if not OPENROUTER_API_KEY:
-    raise RuntimeError("OPENROUTER_API_KEY not found in .env")
+class TextInput(BaseModel):
+    user_id: str
+    feedbacks: list[str]
 
-app = Flask(__name__)
-CORS(app)
-
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL_NAME = "mistralai/mistral-7b-instruct"
-
-
-def analyze_sentiment(text: str) -> str:
-    """
-    Calls OpenRouter API to analyze sentiment of a single feedback text.
-    Returns: Positive / Negative / Neutral
-    """
-    response = requests.post(
-        OPENROUTER_URL,
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": MODEL_NAME,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": (
-                        "Classify the sentiment of the following feedback "
-                        "as Positive, Negative, or Neutral. "
-                        "Respond with only one word.\n\n"
-                        f"Feedback: {text}"
-                    )
-                }
-            ]
-        },
-        timeout=20
-    )
-
-    if response.status_code != 200:
-        raise RuntimeError("OpenRouter API failed")
-
-    sentiment = response.json()["choices"][0]["message"]["content"].strip()
-
-    # Safety normalization
-    sentiment = sentiment.capitalize()
-    if sentiment not in ["Positive", "Negative", "Neutral"]:
-        sentiment = "Neutral"
-
-    return sentiment
-
-
-@app.route("/lyze-batch", methods=["POST"])
-def analyze_batch():
-    data = request.get_json()
-
-    user_id = data.get("user_id")
-    feedbacks = data.get("feedbacks", [])
-
-    if not user_id:
-        return jsonify({"error": "user_id is required"}), 400
-
-    if not feedbacks or not isinstance(feedbacks, list):
-        return jsonify({"error": "feedbacks must be a non-empty list"}), 400
-
-    results = []
-    summary = {
-        "total": 0,
-        "positive": 0,
-        "negative": 0,
-        "neutral": 0
+def analyze_with_ai(text):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
     }
+    payload = {
+        "model": "openai/gpt-3.5-turbo",
+        "messages": [{
+            "role": "user",
+            "content": f"Classify sentiment as Positive, Negative or Neutral:\n{text}"
+        }]
+    }
+    r = requests.post(url, headers=headers, json=payload)
+    res = r.json()["choices"][0]["message"]["content"].lower()
 
-    for feedback in feedbacks:
-        if not isinstance(feedback, str) or not feedback.strip():
-            continue
+    if "positive" in res:
+        return "Positive"
+    elif "negative" in res:
+        return "Negative"
+    return "Neutral"
 
-        sentiment = analyze_sentiment(feedback)
+def process_feedbacks(user_id, feedbacks):
+    results = []
+    summary = {"positive": 0, "negative": 0, "neutral": 0}
 
-        results.append({
-            "feedback": feedback,
-            "sentiment": sentiment
-        })
-
-        summary["total"] += 1
+    for fb in feedbacks:
+        sentiment = analyze_with_ai(fb)
+        results.append({"feedback": fb, "sentiment": sentiment})
         summary[sentiment.lower()] += 1
 
-    return jsonify({
+    return {
         "user_id": user_id,
         "results": results,
-        "summary": summary
-    })
+        "summary": {
+            "total": len(feedbacks),
+            **summary
+        }
+    }
 
+@app.post("/analyze-text")
+def analyze_text(data: TextInput):
+    return process_feedbacks(data.user_id, data.feedbacks)
 
-if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+@app.post("/upload-file")
+async def upload_file(user_id: str, file: UploadFile = File(...)):
+    ext = file.filename.split(".")[-1].lower()
+
+    if ext == "pdf":
+        feedbacks = extract_pdf_text(file.file)
+    elif ext in ["docx"]:
+        feedbacks = extract_docx_text(file.file)
+    elif ext in ["xlsx", "xls", "csv"]:
+        feedbacks = extract_excel_text(file.file)
+    else:
+        return {"error": "Unsupported file type"}
+
+    return process_feedbacks(user_id, feedbacks)

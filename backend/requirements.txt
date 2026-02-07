@@ -1,4 +1,10 @@
-Flask
-flask-cors
-requests
+fastapi
+uvicorn
 python-dotenv
+requests
+PyPDF2
+python-docx
+pandas
+openpyxl
+lxml
+et_xmlfile

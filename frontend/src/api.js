@@ -1,7 +1,18 @@
-
 import axios from "axios";
 
-export const analyzeFeedback = (data) => {
-  return axios.post("http://127.0.0.1:5000/lyze-batch", data);
+const API_BASE = "http://localhost:8000";
+
+export const analyzeText = async (textList) => {
+  const response = await axios.post(`${API_BASE}/analyze-text`, {
+    user_id: "user-1",
+    feedbacks: textList
+  });
+  return response.data;
 };
-    
+
+export const uploadFile = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await axios.post(`${API_BASE}/upload-file?user_id=user-1`, formData);
+  return response.data;
+};
