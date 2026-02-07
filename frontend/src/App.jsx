@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { analyzeFeedback } from "./api";
 import { Sparkles, Send, BarChart3, MessageSquare, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import SentimentProgress from "./components/SentimentProgress";
 
 function App() {
   const [feedbacks, setFeedbacks] = useState("");
@@ -8,19 +9,33 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   const handleAnalyze = async () => {
-    const feedbackArray = feedbacks
-      .split("\n")
-      .map(f => f.trim())
-      .filter(f => f.length > 0);
+    try {
+      setLoading(true);
 
-    const payload = {
-      user_id: "user-12345",
-      feedbacks: feedbackArray
-    };
+      const feedbackArray = feedbacks
+        .split("\n")
+        .map(f => f.trim())
+        .filter(f => f.length > 0);
 
-    const res = await analyzeFeedback(payload);
-    setResult(res.data);
+      const payload = {
+        user_id: "user-12345",
+        feedbacks: feedbackArray
+      };
+
+      const res = await analyzeFeedback(payload);
+      setResult(res.data);
+    } catch (err) {
+      console.error(err);
+      alert("Analysis failed");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  function calculatePercent(value, total) {
+    if (!total) return 0;
+    return Math.round((value / total) * 100);
+  }
 
 
   return (
@@ -86,6 +101,8 @@ function App() {
                   <StatCard label="Negative" value={result.summary.negative} icon={<XCircle className="w-4 h-4 text-rose-400" />} color="rose" />
                   <StatCard label="Neutral" value={result.summary.neutral} icon={<MinusCircle className="w-4 h-4 text-amber-400" />} color="amber" />
                 </div>
+
+                <SentimentProgress summary={result.summary} />
 
                 {/* Detailed List */}
                 <div className="bg-slate-800/40 border border-slate-700 rounded-2xl overflow-hidden">
